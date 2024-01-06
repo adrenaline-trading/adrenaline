@@ -18,6 +18,7 @@ defmodule AdrenalineWeb.Router do
     pipe_through :browser
 
     get "/", PageController, :home
+    live "/chart", Chart.ChartLive
   end
 
   # Other scopes may use custom stacks.

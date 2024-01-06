@@ -50,7 +50,8 @@ defmodule AdrenalineWeb.MixProject do
       {:gettext, "~> 0.20"},
       {:adrenaline, in_umbrella: true},
       {:jason, "~> 1.2"},
-      {:plug_cowboy, "~> 2.5"}
+      {:plug_cowboy, "~> 2.5"},
+      { :contex, path: "../../../contex", app: false}
     ]
   end
 
