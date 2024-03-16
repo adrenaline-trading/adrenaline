@@ -1,3 +1,25 @@
-<div>
-  <%= @chart_svg %>
+<div
+  id="chart-live"
+  class="fixed w-full h-full"
+  data-resize-chart={JS.push( "redraw")}
+  phx-value-width=""
+  phx-value-height=""
+  x-data="{ chartWidth: undefined, chartHeight: undefined, captureChartSize: undefined }"
+  x-init={"
+    if( !captureChartSize) {
+      captureChartSize = () => {
+        chartWidth = $el.offsetWidth;
+        chartHeight = $el.offsetHeight;
+        $nextTick( () => liveSocket.execJS( $el, $el.getAttribute( 'data-resize-chart')));
+      };
+    }
+    if( #{ @connected?}) captureChartSize();
+  "}
+  x-bind:phx-value-width="chartWidth"
+  x-bind:phx-value-height="chartHeight"
+  x-on:resize.window="captureChartSize()"
+>
+  <div :if={@chart_svg} style={"width: #{ @width}px; height: #{ @height}px;"}>
+    <%= @chart_svg %>
+  </div>
 </div>
