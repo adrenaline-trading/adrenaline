@@ -19,7 +19,7 @@
   x-bind:phx-value-height="chartHeight"
   x-on:resize.window="captureChartSize()"
 >
-  <div :if={@chart_svg} style={"width: #{ @width}px; height: #{ @height}px;"}>
-    <%= @chart_svg %>
+  <div :if={@chart} style={"width: #{ @width}px; height: #{ @height}px;"}>
+    <%= @chart %>
   </div>
 </div>

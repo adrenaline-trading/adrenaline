@@ -7,7 +7,7 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   def mount( _params, _session, socket) do
     socket =
       socket
-      |> assign( :chart_svg, nil)
+      |> assign_chart( nil)
       |> assign( :connected?, connected?( socket))
 
     { :ok, socket}
@@ -19,20 +19,21 @@ defmodule AdrenalineWeb.Chart.ChartLive do
 
     socket =
       socket
-      |> assign( :width, String.to_integer( width))
-      |> assign( :height, String.to_integer( height))
+      |> assign_width( String.to_integer( width))
+      |> assign_height( String.to_integer( height))
       |> recompute_chart()
 
     { :noreply, socket}
   end
 
+  @spec recompute_chart( Socket.t()) :: Socket.t()
   defp recompute_chart( socket) do
     [ width, height] <~ socket.assigns
 
-    chart_svg = generate_ohlc_svg( width, height);
-    assign( socket, :chart_svg, chart_svg)
+    assign_chart( socket, generate_ohlc_svg( width, height))
   end
 
+  @spec generate_ohlc_svg( non_neg_integer(), non_neg_integer()) :: Phoenix.HTML.safe()
   defp generate_ohlc_svg( width, height) do
     bar_data = AdrenalineWeb.Chart.Data.data()
     dataset = Dataset.new( bar_data, ["Date", "Open", "High", "Low", "Close", "Volume"])
@@ -56,4 +57,8 @@ defmodule AdrenalineWeb.Chart.ChartLive do
     Plot.new( dataset, Contex.OHLC, width, height, opts)
     |> Plot.to_svg()
   end
+
+  defassignp :width
+  defassignp :height
+  defassignp :chart
 end

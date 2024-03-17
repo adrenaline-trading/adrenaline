@@ -87,6 +87,7 @@ defmodule AdrenalineWeb do
       # Core UI components and translation
       import AdrenalineWeb.CoreComponents
       import AdrenalineWeb.Gettext
+      import AdrenalineWeb.Assigns
 
       # Shortcut for generating JS commands
       alias Phoenix.LiveView.JS
