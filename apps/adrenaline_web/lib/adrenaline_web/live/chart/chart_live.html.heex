@@ -18,8 +18,14 @@
   x-bind:phx-value-width="chartWidth"
   x-bind:phx-value-height="chartHeight"
   x-on:resize.window="captureChartSize()"
+  phx-window-keyup="keyup"
 >
   <div :if={@chart} style={"width: #{ @width}px; height: #{ @height}px;"}>
     <%= @chart %>
   </div>
+
+  <div class="contents" phx-window-keydown="pane-prev-period" phx-key="ArrowLeft"></div>
+  <div class="contents" phx-window-keydown="pane-next-period" phx-key="ArrowRight"></div>
+  <div class="contents" phx-window-keydown="pane-prev-page" phx-key="PageUp"></div>
+  <div class="contents" phx-window-keydown="pane-next-page" phx-key="PageDown"></div>
 </div>

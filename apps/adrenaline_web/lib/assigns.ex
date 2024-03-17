@@ -26,7 +26,7 @@ defmodule AdrenalineWeb.Assigns do
   """
   alias AdrenalineWeb.Assigns
 
-  defmacro defassign( property) do
+  defmacro defassign( property) when is_atom( property) do
     name = Assigns.property_to_name( property)
     property_var = Macro.var( property, nil)
 
@@ -37,13 +37,29 @@ defmodule AdrenalineWeb.Assigns do
     end
   end
 
-  defmacro defassignp( property) do
+  defmacro defassignp( property) when is_atom( property) do
     name = Assigns.property_to_name( property)
     property_var = Macro.var( property, nil)
 
     quote do
       defp unquote( :"assign_#{ name}")( socket, unquote( property_var)) do
         assign( socket, unquote( :"#{ property}"), unquote( property_var))
+      end
+    end
+  end
+
+  defmacro defassign( properties) when is_list( properties) do
+    for property <- properties do
+      quote do
+        defassign unquote( property)
+      end
+    end
+  end
+
+  defmacro defassignp( properties) when is_list( properties) do
+    for property <- properties do
+      quote do
+        defassignp unquote( property)
       end
     end
   end
