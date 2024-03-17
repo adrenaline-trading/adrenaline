@@ -4,19 +4,22 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   alias Contex.{ Dataset, Plot, TimeScale, OHLC}
   alias Phoenix.LiveView.Socket
 
+  @typep timeframe() :: atom()
+
   @impl true
   def mount( _params, _session, socket) do
     socket =
       socket
       |> assign_chart( nil)
-      |> assign_zoom( 3)
-      |> assign_timeframe( :d1)
       |> assign_style( :candle)
       |> assign_bull_color( "00FF77")
       |> assign_bear_color( "FF3333")
       |> assign_shadow_color( "000000")
       |> assign_colorized_bars( false)
+      |> assign_zoom( 3)
+      |> assign_timeframe( :d1)
       |> assign_connected( connected?( socket))
+      |> assign_dataset( AdrenalineWeb.Chart.Data.data())
 
     { :ok, socket}
   end
@@ -79,10 +82,10 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   end
 
   @spec zoom( Socket.t(), ( zoom -> boolean()), ( zoom -> zoom)) :: Socket.t() when zoom: 0..6
-  defp zoom( socket, filter, updater) do
+  defp zoom( socket, verifier, updater) do
     [ zoom] <~ socket.assigns
 
-    if filter.( zoom) do
+    if verifier.( zoom) do
       socket
       |> assign_zoom( updater.( zoom))
       |> recompute_chart()
@@ -96,11 +99,15 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   defp handle_pane_event( pane_event, socket)
 
   defp handle_pane_event( "prev-period", socket) do
-    socket
+    [ min_date] <~ socket.assigns
+
+    shift_domain( socket, -1, &Contex.Utils.date_compare( &1, min_date) != :lt)
   end
 
   defp handle_pane_event( "next-period", socket) do
-    socket
+    [ max_date] <~ socket.assigns
+
+    shift_domain( socket, 1, &Contex.Utils.date_compare( &1, max_date) != :gt)
   end
 
   defp handle_pane_event( "prev-page", socket) do
@@ -111,18 +118,39 @@ defmodule AdrenalineWeb.Chart.ChartLive do
     socket
   end
 
+  @spec shift_domain( Socket.t(), integer(), ( TimeScale.datetimes() -> boolean())) :: Socket.t()
+  defp shift_domain( socket, shift, verifier) do
+    [ domain_min, timeframe] <~ socket.assigns
+
+    new_domain_min = shift_datetime( domain_min, timeframe, shift)
+
+    if verifier.( new_domain_min) do
+      socket
+      |> assign_domain_min( new_domain_min)
+      |> recompute_chart()
+    else
+      socket
+    end
+  end
+
   @spec recompute_chart( Socket.t()) :: Socket.t()
   defp recompute_chart( socket) do
-    assign_chart( socket, generate_ohlc_svg( socket.assigns))
+    [ _domain_min] <~ socket.assigns
+
+    socket
+    |> assign_chart( generate_ohlc_svg( socket.assigns))
+    |> then( & !domain_min && assign_domain_min( &1, Process.get( :domain_min)) || &1)
   end
 
   @spec generate_ohlc_svg( map()) :: Phoenix.HTML.safe()
   defp generate_ohlc_svg( args) do
-    [ width, height, zoom, timeframe, style, bull_color, bear_color, shadow_color, colorized_bars] <~ args
+    [ dataset,
+      width, height,
+      zoom, timeframe, _domain_min,
+      style, bull_color, bear_color, shadow_color, colorized_bars] <~ args
 
+    domain_min = domain_min || &domain_min( &1, timeframe, &2)
     style = style == :bar && :tick || :candle
-    bar_data = AdrenalineWeb.Chart.Data.data()
-    dataset = Dataset.new( bar_data, ["Datetime", "Open", "High", "Low", "Close", "Volume"])
 
     opts = [
       mapping: %{ datetime: "Datetime", open: "Open", high: "High", low: "Low", close: "Close"},
@@ -135,7 +163,7 @@ defmodule AdrenalineWeb.Chart.ChartLive do
       crisp_edges: true,
       body_border: true,
       timeframe: contex_timeframe( timeframe),
-#      domain_min: ~N[2016-03-24 00:00:00],
+      domain_min: domain_min,
       overlays: [
         OHLC.MA.new( period: 5, color: "0000AA", width: 2)
       ]
@@ -145,11 +173,44 @@ defmodule AdrenalineWeb.Chart.ChartLive do
     |> Plot.to_svg()
   end
 
+  @spec domain_min( OHLC.t(), timeframe(), non_neg_integer()) :: TimeScale.datetimes()
+  defp domain_min( ohlc, timeframe, interval_count) do
+    [ dataset, accessors] <~ ohlc.mapping
+
+    first_dt = accessors.datetime.( List.first( dataset.data))
+    last_dt = accessors.datetime.( List.last( dataset.data))
+
+    Contex.Utils.safe_max( first_dt, last_dt)
+    |> shift_datetime( timeframe, -interval_count)
+    |> Contex.Utils.safe_max( Contex.Utils.safe_min( first_dt, last_dt))
+    |> tap( &Process.put( :domain_min, &1))
+  end
+
   # Timeframe related
+
+  @spec shift_datetime( TimeScale.datetimes(), timeframe(), integer()) :: TimeScale.datetimes()
+  defp shift_datetime( datetime, timeframe, shift) do
+    { unit, _, _} = contex_timeframe( timeframe)
+
+    Timex.shift( datetime, [ { unit, shift}])
+  end
+
+  @spec contex_timeframe( timeframe()) :: { atom(), non_neg_integer(), non_neg_integer()}
+  defp contex_timeframe( timeframe)
 
   defp contex_timeframe( :d1), do: TimeScale.timeframe_d1()
 
   # Assigns
+
+  defp assign_dataset( socket, bar_data) do
+    dataset = Dataset.new( bar_data, ["Datetime", "Open", "High", "Low", "Close", "Volume"])
+    { min_date, max_date} = Dataset.column_extents( dataset, "Datetime")
+
+    socket
+    |> assign( :dataset, dataset)
+    |> assign( :min_date, min_date)
+    |> assign( :max_date, max_date)
+  end
 
   # LiveView related
   defassignp :connected?
@@ -158,8 +219,8 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   defassignp [ :width, :height, :chart]
 
   # Chart config
-  defassignp [ :bull_color, :bear_color, :shadow_color, :colorized_bars]
+  defassignp [ :style, :bull_color, :bear_color, :shadow_color, :colorized_bars]
 
   # Dynamic chart settings
-  defassignp [ :zoom, :timeframe, :style]
+  defassignp [ :zoom, :timeframe, :domain_min]
 end

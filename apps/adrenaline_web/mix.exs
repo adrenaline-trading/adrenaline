@@ -52,7 +52,8 @@ defmodule AdrenalineWeb.MixProject do
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
       { :contex, path: "../../../contex", app: false},
-      { :extructure, "~> 1.0.0"}
+      { :extructure, "~> 1.0.0"},
+      { :timex, "~> 3.0"}
     ]
   end
 
