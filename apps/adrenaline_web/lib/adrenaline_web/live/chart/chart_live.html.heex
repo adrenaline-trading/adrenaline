@@ -1,0 +1,31 @@
+<div
+  id="chart-live"
+  class="fixed w-full h-full"
+  data-resize-chart={JS.push( "redraw")}
+  phx-value-width=""
+  phx-value-height=""
+  x-data="{ chartWidth: undefined, chartHeight: undefined, captureChartSize: undefined, timeoutID: undefined }"
+  x-init={"
+    if( !captureChartSize) {
+      captureChartSize = () => {
+        chartWidth = $el.offsetWidth;
+        chartHeight = $el.offsetHeight;
+        $nextTick( () => liveSocket.execJS( $el, $el.getAttribute( 'data-resize-chart')));
+      };
+    }
+    if( #{ @connected?}) captureChartSize();
+  "}
+  x-bind:phx-value-width="chartWidth"
+  x-bind:phx-value-height="chartHeight"
+  x-on:resize.window="if( timeoutID) { clearTimeout( timeoutID) }; timeoutID = setTimeout( captureChartSize, 300);"
+  phx-window-keyup="keyup"
+>
+  <div :if={@chart} style={"width: #{ @width}px; height: #{ @height}px;"}>
+    <%= @chart %>
+  </div>
+
+  <div class="contents" phx-window-keydown="pane-prev-period" phx-key="ArrowLeft"></div>
+  <div class="contents" phx-window-keydown="pane-next-period" phx-key="ArrowRight"></div>
+  <div class="contents" phx-window-keydown="pane-prev-page" phx-key="PageUp"></div>
+  <div class="contents" phx-window-keydown="pane-next-page" phx-key="PageDown"></div>
+</div>
