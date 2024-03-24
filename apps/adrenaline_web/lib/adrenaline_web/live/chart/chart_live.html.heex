@@ -4,7 +4,7 @@
   data-resize-chart={JS.push( "redraw")}
   phx-value-width=""
   phx-value-height=""
-  x-data="{ chartWidth: undefined, chartHeight: undefined, captureChartSize: undefined }"
+  x-data="{ chartWidth: undefined, chartHeight: undefined, captureChartSize: undefined, timeoutID: undefined }"
   x-init={"
     if( !captureChartSize) {
       captureChartSize = () => {
@@ -17,7 +17,7 @@
   "}
   x-bind:phx-value-width="chartWidth"
   x-bind:phx-value-height="chartHeight"
-  x-on:resize.window="captureChartSize()"
+  x-on:resize.window="if( timeoutID) { clearTimeout( timeoutID) }; timeoutID = setTimeout( captureChartSize, 300);"
   phx-window-keyup="keyup"
 >
   <div :if={@chart} style={"width: #{ @width}px; height: #{ @height}px;"}>
