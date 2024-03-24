@@ -102,30 +102,68 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   defp handle_pane_event( "prev-period", socket) do
     [ min_date] <~ socket.assigns
 
-    shift_domain( socket, -1, &Contex.Utils.date_compare( &1, min_date) != :lt)
+    shift_domain( socket, -1, &limit_min( &1, min_date))
   end
 
   defp handle_pane_event( "next-period", socket) do
     [ max_date] <~ socket.assigns
 
-    shift_domain( socket, 1, &Contex.Utils.date_compare( &1, max_date) != :gt)
+    shift_domain( socket, 1, &limit_max( &1, max_date))
   end
 
   defp handle_pane_event( "prev-page", socket) do
-    socket
+    [ interval_count, min_date] <~ socket.assigns
+
+    shift_domain( socket, -interval_count, &limit_min( &1, min_date))
   end
 
   defp handle_pane_event( "next-page", socket) do
-    socket
+    [ interval_count, max_date] <~ socket.assigns
+
+    shift_domain( socket, interval_count, fn date ->
+      if Contex.Utils.date_compare( date, max_date) == :lt do
+        date
+      end
+    end)
   end
 
-  @spec shift_domain( Socket.t(), integer(), ( TimeScale.datetimes() -> boolean())) :: Socket.t()
-  defp shift_domain( socket, shift, verifier) do
+  defp handle_pane_event( "first-page", socket) do
+    [ min_date] <~ socket.assigns
+
+    shift_domain( socket, 0, fn _ -> min_date end)
+  end
+
+  defp handle_pane_event( "last-page", socket) do
+    [ timeframe, max_date, interval_count] <~ socket.assigns
+
+    shift_domain( socket, 0, fn date ->
+      new_domain_min = shift_datetime( max_date, timeframe, -interval_count)
+
+      if Contex.Utils.date_compare( date, new_domain_min) == :gt do
+        date
+      else
+        new_domain_min
+      end
+    end)
+  end
+
+  @spec limit_min( TimeScale.datetimes(), TimeScale.datetimes()) :: TimeScale.datetimes()
+  defp limit_min( first, second) do
+    Contex.Utils.safe_max( first, second)
+  end
+
+  @spec limit_max( TimeScale.datetimes(), TimeScale.datetimes()) :: TimeScale.datetimes()
+  defp limit_max( first, second) do
+    Contex.Utils.safe_min( first, second)
+  end
+
+  @spec shift_domain( Socket.t(), integer(), ( TimeScale.datetimes() -> TimeScale.datetimes() | nil)) :: Socket.t()
+  defp shift_domain( socket, shift, limiter) do
     [ domain_min, timeframe] <~ socket.assigns
 
-    new_domain_min = shift_datetime( domain_min, timeframe, shift)
+    new_domain_min = limiter.( shift_datetime( domain_min, timeframe, shift)) || domain_min
 
-    if verifier.( new_domain_min) do
+    if new_domain_min != domain_min do
       socket
       |> assign_domain_min( new_domain_min)
       |> recompute_chart()
@@ -138,9 +176,16 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   defp recompute_chart( socket) do
     [ _domain_min] <~ socket.assigns
 
+    ohlc_svg = generate_ohlc_svg( socket.assigns)
+    chart_domain = Process.get( :chart_domain)
+
+    domain_min = domain_min || chart_domain.domain_min
+    interval_count = chart_domain.interval_count
+
     socket
-    |> assign_chart( generate_ohlc_svg( socket.assigns))
-    |> then( & !domain_min && assign_domain_min( &1, Process.get( :domain_min)) || &1)
+    |> assign_chart( ohlc_svg)
+    |> assign_domain_min( domain_min)
+    |> assign_interval_count( interval_count)
   end
 
   @spec generate_ohlc_svg( map()) :: Phoenix.HTML.safe()
@@ -150,7 +195,6 @@ defmodule AdrenalineWeb.Chart.ChartLive do
       zoom, timeframe, _domain_min,
       style, bull_color, bear_color, shadow_color, colorized_bars] <~ args
 
-    domain_min = domain_min || &domain_min( &1, timeframe, &2)
     style = style == :bar && :tick || :candle
 
     opts = [
@@ -164,7 +208,7 @@ defmodule AdrenalineWeb.Chart.ChartLive do
       crisp_edges: true,
       body_border: true,
       timeframe: contex_timeframe( timeframe),
-      domain_min: domain_min,
+      domain_min: &domain_provider( &1, timeframe, domain_min, &2),
       overlays: [
         OHLC.MA.new( period: 5, color: "0000AA", width: 2)
       ]
@@ -174,17 +218,22 @@ defmodule AdrenalineWeb.Chart.ChartLive do
     |> Plot.to_svg()
   end
 
-  @spec domain_min( OHLC.t(), timeframe(), non_neg_integer()) :: TimeScale.datetimes()
-  defp domain_min( ohlc, timeframe, interval_count) do
+  # Fetches domain_min while storing both domain min and max
+  # with the Process
+  @spec domain_provider( OHLC.t(), timeframe(), TimeScale.datetimes() | nil, non_neg_integer()) :: TimeScale.datetimes()
+  defp domain_provider( ohlc, timeframe, domain_min, interval_count) do
     [ dataset, accessors] <~ ohlc.mapping
 
     first_dt = accessors.datetime.( List.first( dataset.data))
     last_dt = accessors.datetime.( List.last( dataset.data))
 
-    Contex.Utils.safe_max( first_dt, last_dt)
-    |> shift_datetime( timeframe, -interval_count)
-    |> Contex.Utils.safe_max( Contex.Utils.safe_min( first_dt, last_dt))
-    |> tap( &Process.put( :domain_min, &1))
+    new_domain_min =
+      Contex.Utils.safe_max( first_dt, last_dt)
+      |> shift_datetime( timeframe, -interval_count)
+      |> Contex.Utils.safe_max( Contex.Utils.safe_min( first_dt, last_dt))
+      |> tap( &Process.put( :chart_domain, %{ domain_min: &1, interval_count: interval_count}))
+
+    domain_min || new_domain_min
   end
 
   # Timeframe related
@@ -223,5 +272,5 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   defassignp [ :style, :bull_color, :bear_color, :shadow_color, :colorized_bars]
 
   # Dynamic chart settings
-  defassignp [ :zoom, :timeframe, :domain_min]
+  defassignp [ :zoom, :timeframe, :domain_min, :interval_count]
 end
