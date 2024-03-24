@@ -121,8 +121,28 @@ defmodule AdrenalineWeb.Chart.ChartLive do
     [ interval_count, max_date] <~ socket.assigns
 
     shift_domain( socket, interval_count, fn date ->
-      if Contex.Utils.date_compare( date, max_date) != :gt do
+      if Contex.Utils.date_compare( date, max_date) == :lt do
         date
+      end
+    end)
+  end
+
+  defp handle_pane_event( "first-page", socket) do
+    [ min_date] <~ socket.assigns
+
+    shift_domain( socket, 0, fn _ -> min_date end)
+  end
+
+  defp handle_pane_event( "last-page", socket) do
+    [ timeframe, max_date, interval_count] <~ socket.assigns
+
+    shift_domain( socket, 0, fn date ->
+      new_domain_min = shift_datetime( max_date, timeframe, -interval_count)
+
+      if Contex.Utils.date_compare( date, new_domain_min) == :gt do
+        date
+      else
+        new_domain_min
       end
     end)
   end
