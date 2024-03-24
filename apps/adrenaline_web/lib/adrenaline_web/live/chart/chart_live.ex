@@ -81,7 +81,8 @@ defmodule AdrenalineWeb.Chart.ChartLive do
     zoom( socket, & &1 > 0, & &1 - 1)
   end
 
-  @spec zoom( Socket.t(), ( zoom -> boolean()), ( zoom -> zoom)) :: Socket.t() when zoom: 0..6
+  @spec zoom( Socket.t(), ( zoom -> boolean()), ( zoom -> zoom)) :: Socket.t()
+        when zoom: non_neg_integer()
   defp zoom( socket, verifier, updater) do
     [ zoom] <~ socket.assigns
 
