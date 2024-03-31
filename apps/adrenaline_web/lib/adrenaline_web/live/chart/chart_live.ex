@@ -3,11 +3,19 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   import Extructure
   alias Contex.{ Dataset, Plot, TimeScale, OHLC}
   alias Phoenix.LiveView.Socket
+  alias Adrenaline.History
 
   @typep timeframe() :: atom()
 
   @impl true
   def mount( _params, _session, socket) do
+    { :ok, _chart_info, data} =
+      History.load_file(
+        "~/shared/SPX500USD1440.hst",
+        Adrenaline.Adapters.MT4,
+        &init_storage/0
+      )
+
     socket =
       socket
       |> assign_chart( nil)
@@ -19,9 +27,15 @@ defmodule AdrenalineWeb.Chart.ChartLive do
       |> assign_zoom( 3)
       |> assign_timeframe( :d1)
       |> assign_connected( connected?( socket))
-      |> assign_dataset( AdrenalineWeb.Chart.Data.data())
+      |> assign_dataset( data)
 
     { :ok, socket}
+  end
+
+  defp init_storage() do
+    { :ok,
+      [],
+      &{ :ok, [ &1 | &2]}}
   end
 
   @impl true
@@ -198,7 +212,7 @@ defmodule AdrenalineWeb.Chart.ChartLive do
     style = style == :bar && :tick || :candle
 
     opts = [
-      mapping: %{ datetime: "Datetime", open: "Open", high: "High", low: "Low", close: "Close"},
+      mapping: %{ datetime: "Datetime", open: "Open", high: "High", low: "Low", close: "Close", volume: "Volume"},
       style: style,
       zoom: zoom,
       bull_color: bull_color,
