@@ -11,7 +11,7 @@ defmodule Adrenaline.History do
 
   @type adapter() :: module()
   @type storage() :: any()
-  @type store_bar() :: ( Bar.t() -> { :ok, storage()} | { :error, any()})
+  @type store_bar() :: ( Bar.t(), storage() -> { :ok, storage()} | { :error, any()})
   @type init_storage() :: ( -> { :ok, storage(), store_bar()} | { :error, any()})
 
   @spec load_file( String.t(), adapter(), storage()) :: { :ok, ChartInfo.t(), storage()} | { :error, any()}
@@ -38,7 +38,7 @@ defmodule Adrenaline.History do
 
   # Tail-recursively reads bars one after another via the provided adapter
   # then stores them via the provided `store_bar()` function.
-#  @spec store_next_bar( File.io_device(), adapter(), storage(), store_bar()) :: :ok | { :error, any()}
+  @spec store_next_bar( File.io_device(), adapter(), storage(), store_bar()) :: { :ok, storage()} | { :error, any()}
   defp store_next_bar( file, adapter, storage, store_bar) do
     with { :ok, bar} <- adapter.read_bar( file),
          { :ok, storage} <- store_bar.( bar, storage)
