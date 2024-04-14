@@ -11,7 +11,7 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   def mount( _params, _session, socket) do
     { :ok, _chart_info, data} =
       History.load_file(
-        "~/shared/SPX500USD1440.hst",
+        "/data/vbox_shared/SPX500USD1440.hst",
         Adrenaline.Adapters.MT4,
         &init_storage/0
       )
