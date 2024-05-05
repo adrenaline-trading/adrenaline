@@ -24,10 +24,10 @@
     <%= @chart %>
   </div>
 
-  <div class="contents" phx-window-keydown="pane-prev-period" phx-key="ArrowLeft"></div>
-  <div class="contents" phx-window-keydown="pane-next-period" phx-key="ArrowRight"></div>
-  <div class="contents" phx-window-keydown="pane-prev-page" phx-key="PageUp"></div>
-  <div class="contents" phx-window-keydown="pane-next-page" phx-key="PageDown"></div>
-  <div class="contents" phx-window-keydown="pane-first-page" phx-key="Home"></div>
-  <div class="contents" phx-window-keydown="pane-last-page" phx-key="End"></div>
+  <div class="contents" phx-window-keydown="pane-prev-period" phx-key="ArrowLeft" phx-throttle="100"></div>
+  <div class="contents" phx-window-keydown="pane-next-period" phx-key="ArrowRight" phx-throttle="100"></div>
+  <div class="contents" phx-window-keydown="pane-prev-page" phx-key="PageUp" phx-throttle="100"></div>
+  <div class="contents" phx-window-keydown="pane-next-page" phx-key="PageDown" phx-throttle="100"></div>
+  <div class="contents" phx-window-keydown="pane-first-page" phx-key="Home" phx-throttle="100"></div>
+  <div class="contents" phx-window-keydown="pane-last-page" phx-key="End" phx-throttle="100"></div>
 </div>
