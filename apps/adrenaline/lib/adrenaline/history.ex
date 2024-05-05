@@ -14,11 +14,11 @@ defmodule Adrenaline.History do
   @type store_bar() :: ( Bar.t(), storage() -> { :ok, storage()} | { :error, any()})
   @type init_storage() :: ( -> { :ok, storage(), store_bar()} | { :error, any()})
 
-  @spec load_file( String.t(), adapter(), storage()) :: { :ok, ChartInfo.t(), storage()} | { :error, any()}
-  def load_file( filename, adapter, storage) do
+  @spec load_file( String.t(), adapter(), init_storage()) :: { :ok, ChartInfo.t(), storage()} | { :error, any()}
+  def load_file( filename, adapter, init_storage) do
     filename
     |> Path.expand()
-    |> File.open( [ :read, { :read_ahead, @read_ahead}], &do_load_file( &1, adapter, storage))
+    |> File.open( [ :read, { :read_ahead, @read_ahead}], &do_load_file( &1, adapter, init_storage))
     |> interpret_open_file()
   end
 
