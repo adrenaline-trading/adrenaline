@@ -43,7 +43,9 @@ defmodule Adrenaline.MixProject do
       {:jason, "~> 1.2"},
       {:swoosh, "~> 1.3"},
       {:finch, "~> 0.13"},
-      { :extructure, "~> 1.0.0"}
+      { :extructure, "~> 1.0.0"},
+      { :timex, "~> 3.0"},
+      { :matcha, "~> 0.1"}
     ]
   end
 

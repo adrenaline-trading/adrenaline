@@ -4,6 +4,8 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   alias Contex.{ Dataset, Plot, TimeScale, OHLC}
   alias Phoenix.LiveView.Socket
   alias Adrenaline.History
+  alias Adrenaline.Utils
+  alias Adrenaline.ETS
 
   @typep timeframe() :: atom()
 
@@ -13,7 +15,7 @@ defmodule AdrenalineWeb.Chart.ChartLive do
       History.load_file(
         "/data/vbox_shared/SPX500USD1440.hst",
         Adrenaline.Adapters.MT4,
-        &init_storage/0
+        &ETS.init_storage/0
       )
 
     socket =
@@ -27,15 +29,9 @@ defmodule AdrenalineWeb.Chart.ChartLive do
       |> assign_zoom( 3)
       |> assign_timeframe( :d1)
       |> assign_connected( connected?( socket))
-      |> assign_dataset( data)
+      |> store_dataset( data)
 
     { :ok, socket}
-  end
-
-  defp init_storage() do
-    { :ok,
-      [],
-      &{ :ok, [ &1 | &2]}}
   end
 
   @impl true
@@ -116,13 +112,13 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   defp handle_pane_event( "prev-period", socket) do
     [ min_date] <~ socket.assigns
 
-    shift_domain( socket, -1, &limit_min( &1, min_date))
+    shift_domain( socket, -4, &limit_min( &1, min_date))
   end
 
   defp handle_pane_event( "next-period", socket) do
     [ max_date] <~ socket.assigns
 
-    shift_domain( socket, 1, &limit_max( &1, max_date))
+    shift_domain( socket, 4, &limit_max( &1, max_date))
   end
 
   defp handle_pane_event( "prev-page", socket) do
@@ -151,7 +147,7 @@ defmodule AdrenalineWeb.Chart.ChartLive do
     [ timeframe, max_date, interval_count] <~ socket.assigns
 
     shift_domain( socket, 0, fn date ->
-      new_domain_min = shift_datetime( max_date, timeframe, -interval_count)
+      new_domain_min = Utils.shift_datetime( timeframe, max_date, -interval_count)
 
       if Contex.Utils.date_compare( date, new_domain_min) == :gt do
         date
@@ -175,7 +171,7 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   defp shift_domain( socket, shift, limiter) do
     [ domain_min, timeframe] <~ socket.assigns
 
-    new_domain_min = limiter.( shift_datetime( domain_min, timeframe, shift)) || domain_min
+    new_domain_min = limiter.( Utils.shift_datetime( timeframe, domain_min, shift)) || domain_min
 
     if new_domain_min != domain_min do
       socket
@@ -204,7 +200,7 @@ defmodule AdrenalineWeb.Chart.ChartLive do
 
   @spec generate_ohlc_svg( map()) :: Phoenix.HTML.safe()
   defp generate_ohlc_svg( args) do
-    [ dataset,
+    [ dataset, min_date,
       width, height,
       zoom, timeframe, _domain_min,
       style, bull_color, bear_color, shadow_color, colorized_bars] <~ args
@@ -228,9 +224,18 @@ defmodule AdrenalineWeb.Chart.ChartLive do
       ]
     ]
 
-    Plot.new( dataset, Contex.OHLC, width, height, opts)
+    interval_count = Contex.OHLC.fixed_interval_count( opts ++ [ width: width])
+
+    dataset
+    |> window( timeframe: timeframe, first: domain_min || min_date, count: interval_count)
+    |> Plot.new( Contex.OHLC, width, height, opts)
     |> Plot.to_svg()
   end
+
+  @spec contex_timeframe( timeframe()) :: { atom(), non_neg_integer(), non_neg_integer()}
+  defp contex_timeframe( timeframe)
+
+  defp contex_timeframe( :d1), do: TimeScale.timeframe_d1()
 
   # Fetches domain_min while storing both domain min and max
   # with the Process
@@ -243,38 +248,44 @@ defmodule AdrenalineWeb.Chart.ChartLive do
 
     new_domain_min =
       Contex.Utils.safe_max( first_dt, last_dt)
-      |> shift_datetime( timeframe, -interval_count)
+      |> then( &Utils.shift_datetime( timeframe, &1, -interval_count))
       |> Contex.Utils.safe_max( Contex.Utils.safe_min( first_dt, last_dt))
       |> tap( &Process.put( :chart_domain, %{ domain_min: &1, interval_count: interval_count}))
 
     domain_min || new_domain_min
   end
 
-  # Timeframe related
+  # Extracts a list-based time window Dataset from an ETS-based Dataset.
+  @spec window( Dataset.t(), keyword()) :: Dataset.t()
+  defp window( dataset, opts) do
+    [ timeframe | opts] <~ opts
 
-  @spec shift_datetime( TimeScale.datetimes(), timeframe(), integer()) :: TimeScale.datetimes()
-  defp shift_datetime( datetime, timeframe, shift) do
-    { unit, _, _} = contex_timeframe( timeframe)
+    Dataset.update_data( dataset, fn table ->
+      match_spec = ETS.time_window_spec( timeframe, opts)
 
-    Timex.shift( datetime, [ { unit, shift}])
+      ETS.select( table, match_spec)
+    end)
   end
 
-  @spec contex_timeframe( timeframe()) :: { atom(), non_neg_integer(), non_neg_integer()}
-  defp contex_timeframe( timeframe)
+  # Timeframe related
 
-  defp contex_timeframe( :d1), do: TimeScale.timeframe_d1()
+  defp store_dataset( socket, table) when is_reference( table) do
+    first_value = ETS.first_value( table)
+    last_value = ETS.last_value( table)
 
-  # Assigns
-
-  defp assign_dataset( socket, bar_data) do
-    dataset = Dataset.new( bar_data, ["Datetime", "Open", "High", "Low", "Close", "Volume"])
-    { min_date, max_date} = Dataset.column_extents( dataset, "Datetime")
+    dataset = Dataset.new( [ first_value], ["Datetime", "Open", "High", "Low", "Close", "Volume"])
+    accessor = Dataset.value_fn(dataset, "Datetime")
+    min_date = accessor.( first_value)
+    max_date = accessor.( last_value)
+    dataset = Dataset.update_data( dataset, fn _ -> table end)
 
     socket
     |> assign( :dataset, dataset)
     |> assign( :min_date, min_date)
     |> assign( :max_date, max_date)
   end
+
+  # Assigns
 
   # LiveView related
   defassignp :connected?
