@@ -1,7 +1,7 @@
 defmodule AdrenalineWeb.Chart.ChartLive do
   use AdrenalineWeb, :live_view
   import Extructure
-  alias Contex.{ Dataset, Plot, TimeScale, OHLC}
+  alias Contex.{ Dataset, Plot, TimeScale, OHLC, OHLC.Overlayable}
   alias Phoenix.LiveView.Socket
   alias Adrenaline.History
   alias Adrenaline.Utils
@@ -226,8 +226,16 @@ defmodule AdrenalineWeb.Chart.ChartLive do
 
     interval_count = Contex.OHLC.fixed_interval_count( opts ++ [ width: width])
 
+    first =
+      if domain_min do
+        max_lag = Enum.reduce( opts[ :overlays], 0, &max( Overlayable.lag( &1), &2))
+        Utils.shift_datetime( timeframe, domain_min, -max_lag)
+      else
+        min_date
+      end
+
     dataset
-    |> window( timeframe: timeframe, first: domain_min || min_date, count: interval_count)
+    |> window( timeframe: timeframe, first: first, count: interval_count)
     |> Plot.new( Contex.OHLC, width, height, opts)
     |> Plot.to_svg()
   end
