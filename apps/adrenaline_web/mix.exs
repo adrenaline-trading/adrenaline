@@ -51,8 +51,8 @@ defmodule AdrenalineWeb.MixProject do
       {:adrenaline, in_umbrella: true},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
-      { :contex, path: "../../../contex", app: false},
-#      { :contex, git: "https://github.com/DaTrader/contex", branch: "ohlc_scale"},
+#      { :contex, path: "../../../contex", app: false},
+      { :contex, git: "https://github.com/DaTrader/contex", ref: "b36fbbe7005a8a8e687c824bced19a750a69af18"},
       { :extructure, "~> 1.0.0"},
       { :timex, "~> 3.0"}
     ]
