@@ -3,16 +3,16 @@ defmodule Adrenaline.Adapters.MT4 do
   MT4 history file adapter.
   """
   alias Adrenaline.Adapters.MT4.{ MT4Header, MT4Bar}
-  alias Adrenaline.History.{ ChartInfo, Bar}
+  alias Adrenaline.History.{ Header, Bar}
 
   @behaviour Adrenaline.History.Adapter
 
   @impl true
-  def read_info( device) do
+  def read_header( device) do
     case read_mt4_header( device) do
       { :ok, header} ->
         { :ok,
-          ChartInfo.new(
+          Header.new(
             format: "MT4",
             copyrighted?: true,
             symbol: header.symbol,
@@ -22,11 +22,11 @@ defmodule Adrenaline.Adapters.MT4 do
             proprietary: Map.from_struct( header)
           )}
 
-      :eof ->
-        { :error, :eof}
-
       { :error, _} = error ->
         error
+
+      :eof ->
+        { :error, :eof}
     end
   end
 

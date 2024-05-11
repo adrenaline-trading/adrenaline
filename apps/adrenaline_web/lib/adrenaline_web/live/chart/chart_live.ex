@@ -11,8 +11,8 @@ defmodule AdrenalineWeb.Chart.ChartLive do
 
   @impl true
   def mount( _params, _session, socket) do
-    { :ok, _chart_info, data} =
-      History.load_file(
+    { :ok, history} =
+      History.from_file(
         "/data/vbox_shared/SPX500USD1440.hst",
         Adrenaline.Adapters.MT4,
         &ETS.init_storage/0
@@ -29,7 +29,7 @@ defmodule AdrenalineWeb.Chart.ChartLive do
       |> assign_zoom( 3)
       |> assign_timeframe( :d1)
       |> assign_connected( connected?( socket))
-      |> store_dataset( data)
+      |> store_dataset( history.data)
 
     { :ok, socket}
   end
@@ -280,7 +280,8 @@ defmodule AdrenalineWeb.Chart.ChartLive do
 
   # Timeframe related
 
-  defp store_dataset( socket, table) when is_reference( table) do
+  @spec store_dataset( Socket.t(), ETS.table()) :: Socket.t()
+  defp store_dataset( socket, table) do
     first_value = ETS.first_value( table)
     last_value = ETS.last_value( table)
 

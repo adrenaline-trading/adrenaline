@@ -2,7 +2,7 @@ defmodule Adrenaline.ETS do
   import Extructure
   alias Adrenaline.Utils
 
-  @type table() :: reference()
+  @type table() :: :ets.tid()
   @type key() :: term()
   @type object() :: { key(), any()}
 

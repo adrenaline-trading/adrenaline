@@ -4,49 +4,63 @@ defmodule Adrenaline.History do
 
   Extendable with adapters via `Adrenaline.History.Adapter` behaviour.
   """
-  alias Adrenaline.History.{ ChartInfo, Bar}
+  alias Adrenaline.History.{ Header, Bar}
+  alias Adrenaline.ETS
   require Logger
+
+  @enforce_keys [ :header, :data]
+  defstruct @enforce_keys
+
+  @type data() :: ETS.table()
+  @type adapter() :: module()
+  @type store_bar() :: ( Bar.t(), data() -> { :ok, data()} | { :error, any()})
+  @type init_storage() :: ( -> { :ok, data(), store_bar()} | { :error, any()})
+
+  @type t() ::
+          %__MODULE__{
+            header: Header.t(),
+            data: data()
+          }
 
   @read_ahead 1_000_000
 
-  @type adapter() :: module()
-  @type storage() :: any()
-  @type store_bar() :: ( Bar.t(), storage() -> { :ok, storage()} | { :error, any()})
-  @type init_storage() :: ( -> { :ok, storage(), store_bar()} | { :error, any()})
-
-  @spec load_file( String.t(), adapter(), init_storage()) :: { :ok, ChartInfo.t(), storage()} | { :error, any()}
-  def load_file( filename, adapter, init_storage) do
+  @spec from_file( String.t(), adapter(), init_storage()) :: { :ok, t()} | { :error, any()}
+  def from_file( filename, adapter, init_storage) do
     filename
     |> Path.expand()
-    |> File.open( [ :read, { :read_ahead, @read_ahead}], &do_load_file( &1, adapter, init_storage))
+    |> File.open( [ :read, { :read_ahead, @read_ahead}], &load_file( &1, adapter, init_storage))
     |> interpret_open_file()
   end
 
   defp interpret_open_file( { :ok, result}), do: result
   defp interpret_open_file( { :error, _} = error), do: error
 
-  @spec do_load_file( File.io_device(), adapter(), init_storage()) ::
-          { :ok, ChartInfo.t(), storage()} | { :error, any()}
-  defp do_load_file( file, adapter, init_storage) do
-    with { :ok, chart_info} <- adapter.read_info( file),
-         { :ok, storage, store_bar} <- init_storage.(),
-         { :ok, storage} <- store_next_bar( file, adapter, storage, store_bar)
+  @spec load_file( File.io_device(), adapter(), init_storage()) :: { :ok, t()} | { :error, any()}
+  defp load_file( file, adapter, init_storage) do
+    with { :ok, header} <- adapter.read_header( file),
+         { :ok, data, store_bar} <- init_storage.(),
+         { :ok, data} <- store_next_bar( file, adapter, data, store_bar)
       do
-      { :ok, chart_info, storage}
+      { :ok, new( header: header, data: data)}
     end
+  end
+
+  @spec new( map() | keyword()) :: t()
+  defp new( args) do
+    struct!( __MODULE__, args)
   end
 
   # Tail-recursively reads bars one after another via the provided adapter
   # then stores them via the provided `store_bar()` function.
-  @spec store_next_bar( File.io_device(), adapter(), storage(), store_bar()) :: { :ok, storage()} | { :error, any()}
-  defp store_next_bar( file, adapter, storage, store_bar) do
+  @spec store_next_bar( File.io_device(), adapter(), data(), store_bar()) :: { :ok, data()} | { :error, any()}
+  defp store_next_bar( file, adapter, data, store_bar) do
     with { :ok, bar} <- adapter.read_bar( file),
-         { :ok, storage} <- store_bar.( bar, storage)
+         { :ok, data} <- store_bar.( bar, data)
       do
-      store_next_bar( file, adapter, storage, store_bar)
+      store_next_bar( file, adapter, data, store_bar)
     else
       :eof ->
-        { :ok, storage}
+        { :ok, data}
 
       { :error, reason} = error ->
         Logger.error inspect( reason)

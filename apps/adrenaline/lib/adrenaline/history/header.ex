@@ -1,6 +1,6 @@
-defmodule Adrenaline.History.ChartInfo do
+defmodule Adrenaline.History.Header do
   @moduledoc """
-  Chart information
+  History header information
   """
   @enforce_keys [ :format, :copyrighted?, :symbol, :time_unit, :period, :digits, :proprietary]
   defstruct @enforce_keys
