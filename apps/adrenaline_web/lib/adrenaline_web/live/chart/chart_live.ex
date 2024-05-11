@@ -226,12 +226,15 @@ defmodule AdrenalineWeb.Chart.ChartLive do
 
     interval_count = Contex.OHLC.fixed_interval_count( opts ++ [ width: width])
 
-    first =
+    # Account for overlay lags
+    { first, interval_count} =
       if domain_min do
         max_lag = Enum.reduce( opts[ :overlays], 0, &max( Overlayable.lag( &1), &2))
-        Utils.shift_datetime( timeframe, domain_min, -max_lag)
+
+        { Utils.shift_datetime( timeframe, domain_min, -max_lag),
+          interval_count + max_lag}
       else
-        min_date
+        { min_date, interval_count}
       end
 
     dataset
