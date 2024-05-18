@@ -4,8 +4,7 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   alias Contex.{ Dataset, Plot, TimeScale, OHLC, OHLC.Overlayable}
   alias Phoenix.LiveView.Socket
   alias Adrenaline.History
-  alias Adrenaline.Utils
-  alias Adrenaline.ETS
+  alias AdrenalineShared.{ Utils, ETS}
 
   @typep timeframe() :: atom()
 
@@ -199,11 +198,11 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   end
 
   @spec generate_ohlc_svg( map()) :: Phoenix.HTML.safe()
-  defp generate_ohlc_svg( args) do
+  defp generate_ohlc_svg( assigns) do
     [ dataset, min_date,
       width, height,
       zoom, timeframe, _domain_min,
-      style, bull_color, bear_color, shadow_color, colorized_bars] <~ args
+      style, bull_color, bear_color, shadow_color, colorized_bars] <~ assigns
 
     style = style == :bar && :tick || :candle
 

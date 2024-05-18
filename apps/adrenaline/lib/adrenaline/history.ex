@@ -5,7 +5,7 @@ defmodule Adrenaline.History do
   Extendable with adapters via `Adrenaline.History.Adapter` behaviour.
   """
   alias Adrenaline.History.{ Header, Bar}
-  alias Adrenaline.ETS
+  alias AdrenalineShared.ETS
   require Logger
 
   @enforce_keys [ :header, :data]

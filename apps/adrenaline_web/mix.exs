@@ -51,6 +51,7 @@ defmodule AdrenalineWeb.MixProject do
       {:adrenaline, in_umbrella: true},
       {:jason, "~> 1.2"},
       {:plug_cowboy, "~> 2.5"},
+      { :adrenaline_shared, in_umbrella: true},
 #      { :contex, path: "../../../contex", app: false},
       { :contex, git: "https://github.com/DaTrader/contex", ref: "b36fbbe7005a8a8e687c824bced19a750a69af18"},
       { :extructure, "~> 1.0.0"},

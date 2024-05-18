@@ -1,4 +1,4 @@
-defmodule Adrenaline.Utils do
+defmodule AdrenalineShared.Utils do
   @type datetime() :: DateTime.t() | NaiveDateTime.t() | Date.t()
   @type timeframe() :: atom() | { atom(), non_neg_integer()}
 

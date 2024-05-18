@@ -1,6 +1,6 @@
-defmodule Adrenaline.ETS do
+defmodule AdrenalineShared.ETS do
   import Extructure
-  alias Adrenaline.Utils
+  alias AdrenalineShared.Utils
 
   @type table() :: :ets.tid()
   @type key() :: term()

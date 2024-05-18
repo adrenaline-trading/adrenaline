@@ -1,9 +1,9 @@
-defmodule Adrenaline.MixProject do
+defmodule AdrenalineShared.MixProject do
   use Mix.Project
 
   def project do
     [
-      app: :adrenaline,
+      app: :adrenaline_shared,
       version: "0.1.0",
       build_path: "../../_build",
       config_path: "../../config/config.exs",
@@ -22,7 +22,7 @@ defmodule Adrenaline.MixProject do
   # Type `mix help compile.app` for more information.
   def application do
     [
-      mod: {Adrenaline.Application, []},
+      mod: {AdrenalineShared.Application, []},
       extra_applications: [:logger, :runtime_tools]
     ]
   end
@@ -36,15 +36,9 @@ defmodule Adrenaline.MixProject do
   # Type `mix help deps` for examples and options.
   defp deps do
     [
-      {:dns_cluster, "~> 0.1.1"},
-      {:phoenix_pubsub, "~> 2.1"},
-      {:ecto_sql, "~> 3.10"},
-      {:postgrex, ">= 0.0.0"},
-      {:jason, "~> 1.2"},
-      {:swoosh, "~> 1.3"},
-      {:finch, "~> 0.13"},
-      { :adrenaline_shared, in_umbrella: true},
-      { :extructure, "~> 1.0.0"}
+      { :extructure, "~> 1.0.0"},
+      { :timex, "~> 3.0"},
+      { :matcha, "~> 0.1"}
     ]
   end
 
@@ -53,10 +47,7 @@ defmodule Adrenaline.MixProject do
   # See the documentation for `Mix` for more info on aliases.
   defp aliases do
     [
-      setup: ["deps.get", "ecto.setup"],
-      "ecto.setup": ["ecto.create", "ecto.migrate", "run priv/repo/seeds.exs"],
-      "ecto.reset": ["ecto.drop", "ecto.setup"],
-      test: ["ecto.create --quiet", "ecto.migrate --quiet", "test"]
+      setup: ["deps.get"]
     ]
   end
 end
