@@ -4,40 +4,40 @@ defmodule Adrenaline.History.Bar do
   """
   import Extructure
 
-  @type time() :: NaiveDateTime.t()
+  @type datetime() :: Date.t() | DateTime.t() | NaiveDateTime.t()
   @type open() :: float()
   @type high() :: float()
   @type low() :: float()
   @type close() :: float()
   @type volume() :: non_neg_integer()
 
-  @type t() :: { time(), open(), high(), low(), close(), volume()}
+  @type t() :: { datetime(), open(), high(), low(), close(), volume()}
 
   @doc """
   Instantiates a new `Bar` tuple.
   """
   @spec new( map() | keyword()) :: t()
   def new( args) do
-    [ time, open, high, low, close, volume] <~ args
+    [ datetime, open, high, low, close, volume] <~ args
 
-    { time, open, high, low, close, volume}
+    { datetime, open, high, low, close, volume}
   end
 
-  @spec time( t()) :: time()
-  def time( { time, _open, _high, _low, _close, _volume}), do: time
+  @spec time( t()) :: datetime()
+  def time( { datetime, _open, _high, _low, _close, _volume}), do: datetime
 
   @spec open( t()) :: open()
-  def open( { _time, open, _high, _low, _close, _volume}), do: open
+  def open( { _datetime, open, _high, _low, _close, _volume}), do: open
 
   @spec high( t()) :: high()
-  def high( { _time, _open, high, _low, _close, _volume}), do: high
+  def high( { _datetime, _open, high, _low, _close, _volume}), do: high
 
   @spec low( t()) :: low()
-  def low( { _time, _open, _high, low, _close, _volume}), do: low
+  def low( { _datetime, _open, _high, low, _close, _volume}), do: low
 
   @spec close( t()) :: close()
-  def close( { _time, _open, _high, _low, close, _volume}), do: close
+  def close( { _datetime, _open, _high, _low, close, _volume}), do: close
 
   @spec volume( t()) :: volume()
-  def volume( { _time, _open, _high, _low, _close, volume}), do: volume
+  def volume( { _datetime, _open, _high, _low, _close, volume}), do: volume
 end

@@ -5,18 +5,18 @@ defmodule Adrenaline.HistoryStorage do
   import Extructure
   alias AdrenalineShared.{ Utils, ETS}
 
-  @behaviour AdrenalineShared.Storage
+  @behaviour Adrenaline.History
 
   # todo: retrieve tables from a pool where they're named (with strings) and reused once no longer needed
   @impl true
-  def init() do
+  def init_storage() do
     table = :ets.new( :table, [ :ordered_set, :private])
 
     { :ok, table}
   end
 
   @impl true
-  def store( table, bar_tuple) when is_tuple( bar_tuple) do
+  def store_bar( table, bar_tuple) when is_tuple( bar_tuple) do
     key =
       elem( bar_tuple, 0)
       |> Utils.unix_time()

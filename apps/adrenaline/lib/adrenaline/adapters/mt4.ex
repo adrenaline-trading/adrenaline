@@ -36,6 +36,8 @@ defmodule Adrenaline.Adapters.MT4 do
       { :ok,
         bar
         |> Map.from_struct()
+        |> then( &Map.put( &1, :datetime, &1.time))
+        |> Map.delete( :time)
         |> Bar.new()}
     end
   end
