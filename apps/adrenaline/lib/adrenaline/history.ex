@@ -4,7 +4,7 @@ defmodule Adrenaline.History do
 
   Extendable with adapters via `Adrenaline.History.Adapter` behaviour.
   """
-  alias Adrenaline.History.{ Header, Bar}
+  alias Adrenaline.History.Header
   alias AdrenalineShared.ETS
   require Logger
 
@@ -13,8 +13,7 @@ defmodule Adrenaline.History do
 
   @type data() :: ETS.table()
   @type adapter() :: module()
-  @type store_bar() :: ( Bar.t(), data() -> { :ok, data()} | { :error, any()})
-  @type init_storage() :: ( -> { :ok, data(), store_bar()} | { :error, any()})
+  @type storage() :: module()
 
   @type t() ::
           %__MODULE__{
@@ -24,22 +23,22 @@ defmodule Adrenaline.History do
 
   @read_ahead 1_000_000
 
-  @spec from_file( String.t(), adapter(), init_storage()) :: { :ok, t()} | { :error, any()}
-  def from_file( filename, adapter, init_storage) do
+  @spec from_file( String.t(), adapter(), storage()) :: { :ok, t()} | { :error, any()}
+  def from_file( filename, adapter, storage) do
     filename
     |> Path.expand()
-    |> File.open( [ :read, { :read_ahead, @read_ahead}], &load_file( &1, adapter, init_storage))
+    |> File.open( [ :read, { :read_ahead, @read_ahead}], &load_file( &1, adapter, storage))
     |> interpret_open_file()
   end
 
   defp interpret_open_file( { :ok, result}), do: result
   defp interpret_open_file( { :error, _} = error), do: error
 
-  @spec load_file( File.io_device(), adapter(), init_storage()) :: { :ok, t()} | { :error, any()}
-  defp load_file( file, adapter, init_storage) do
+  @spec load_file( File.io_device(), adapter(), storage()) :: { :ok, t()} | { :error, any()}
+  defp load_file( file, adapter, storage) do
     with { :ok, header} <- adapter.read_header( file),
-         { :ok, data, store_bar} <- init_storage.(),
-         { :ok, data} <- store_next_bar( file, adapter, data, store_bar)
+         { :ok, data} <- storage.init(),
+         { :ok, data} <- store_next_bar( file, adapter, data, storage)
       do
       { :ok, new( header: header, data: data)}
     end
@@ -52,12 +51,12 @@ defmodule Adrenaline.History do
 
   # Tail-recursively reads bars one after another via the provided adapter
   # then stores them via the provided `store_bar()` function.
-  @spec store_next_bar( File.io_device(), adapter(), data(), store_bar()) :: { :ok, data()} | { :error, any()}
-  defp store_next_bar( file, adapter, data, store_bar) do
+  @spec store_next_bar( File.io_device(), adapter(), data(), storage()) :: { :ok, data()} | { :error, any()}
+  defp store_next_bar( file, adapter, data, storage) do
     with { :ok, bar} <- adapter.read_bar( file),
-         { :ok, data} <- store_bar.( bar, data)
+         { :ok, data} <- storage.store( data, bar)
       do
-      store_next_bar( file, adapter, data, store_bar)
+      store_next_bar( file, adapter, data, storage)
     else
       :eof ->
         { :ok, data}
