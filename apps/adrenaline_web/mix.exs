@@ -55,7 +55,8 @@ defmodule AdrenalineWeb.MixProject do
       { :extructure, "~> 1.0.0"},
       { :timex, "~> 3.0"},
       { :adrenaline, in_umbrella: true},
-      { :adrenaline_shared, git: "https://github.com/adrenaline-trading/adrenaline_shared.git", branch: "main"}
+      { :adrenaline_shared, path: "../../../adrenaline_shared", app: false},
+#      { :adrenaline_shared, git: "https://github.com/adrenaline-trading/adrenaline_shared.git", branch: "main"},
     ]
   end
 

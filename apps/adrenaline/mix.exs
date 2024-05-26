@@ -45,7 +45,8 @@ defmodule Adrenaline.MixProject do
       {:finch, "~> 0.13"},
       { :extructure, "~> 1.0.0"},
       { :matcha, "~> 0.1"},
-      { :adrenaline_shared, git: "https://github.com/adrenaline-trading/adrenaline_shared.git", branch: "main"}
+      { :adrenaline_shared, path: "../../../adrenaline_shared", app: false}
+#      { :adrenaline_shared, git: "https://github.com/adrenaline-trading/adrenaline_shared.git", branch: "main"},
     ]
   end
 

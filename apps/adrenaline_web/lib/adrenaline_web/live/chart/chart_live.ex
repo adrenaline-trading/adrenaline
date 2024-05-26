@@ -3,8 +3,8 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   import Extructure
   alias Contex.{ Dataset, Plot, TimeScale, OHLC, OHLC.Overlayable}
   alias Phoenix.LiveView.Socket
-  alias Adrenaline.History
   alias Adrenaline.HistoryStorage
+  alias Adrenaline.ETSHistoryStorage
   alias AdrenalineShared.{ Utils, ETS}
 
   @typep timeframe() :: atom()
@@ -12,10 +12,10 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   @impl true
   def mount( _params, _session, socket) do
     { :ok, history} =
-      History.from_file(
+      HistoryStorage.from_file(
         "/data/vbox_shared/SPX500USD1440.hst",
         Adrenaline.Adapters.MT4,
-        Adrenaline.HistoryStorage
+        Adrenaline.ETSHistoryStorage
       )
 
     socket =
@@ -273,7 +273,7 @@ defmodule AdrenalineWeb.Chart.ChartLive do
     [ timeframe | opts] <~ opts
 
     Dataset.update_data( dataset, fn table ->
-      match_spec = HistoryStorage.time_window_spec( timeframe, opts)
+      match_spec = ETSHistoryStorage.time_window_spec( timeframe, opts)
 
       ETS.select( table, match_spec)
     end)

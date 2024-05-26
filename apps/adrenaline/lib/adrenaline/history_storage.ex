@@ -1,51 +1,71 @@
 defmodule Adrenaline.HistoryStorage do
   @moduledoc """
-  ETS based implementation of the OHLC bar history storage.
+  Exposes functions for reading price history data.
+
+  Extendable with adapters via `Adrenaline.History.Adapter` behaviour.
   """
-  import Extructure
-  alias AdrenalineShared.{ Utils, ETS}
 
-  @behaviour Adrenaline.History
+  # Chart activity storage behaviour.
+  alias AdrenalineShared.History
+  require Logger
 
-  # todo: retrieve tables from a pool where they're named (with strings) and reused once no longer needed
-  @impl true
-  def init_storage() do
-    table = :ets.new( :table, [ :ordered_set, :private])
-
-    { :ok, table}
-  end
-
-  @impl true
-  def store_bar( table, bar_tuple) when is_tuple( bar_tuple) do
-    key =
-      elem( bar_tuple, 0)
-      |> Utils.unix_time()
-
-    :ets.insert( table, { key, bar_tuple})
-
-    { :ok, table}
-  end
-
-  @type timeframe() :: atom() | { atom(), non_neg_integer()}
-
-  require Matcha
+  @type data() :: History.data()
+  @type adapter() :: module()
 
   @doc """
-  Returns ETS match specification for retrieving
-  a time window of the ETS table data.
-  Fails if `first` or either of `last` or `count` are missing.
+  Initializes the history storage.
   """
-  @spec time_window_spec( timeframe(), keyword()) :: ETS.match_spec()
-  def time_window_spec( timeframe, opts) do
-    [ first, _last, _count] <~ opts
+  @callback init() :: { :ok, data()} | { :error, any()}
 
-    last = last || Utils.shift_datetime( timeframe, first, count - 1)
-    unix_first = Utils.unix_time( first)
-    unix_last = Utils.unix_time( last)
+  @doc """
+  Stores a bar instance into storage.
+  Returns the stored data identifier or the stored date itself.
+  """
+  @callback store_bar( data(), History.Bar.t()) :: { :ok, data()} | { :error, any()}
 
-    Matcha.spec do
-      { unix_time, data} when unix_time >= unix_first and unix_time <= unix_last -> data
+  @typedoc """
+  An Adrenaline.History storage implementation
+  """
+  @type storage() :: module()
+
+  @read_ahead 1_000_000
+
+  @spec from_file( String.t(), adapter(), storage()) :: { :ok, History.t()} | { :error, any()}
+  def from_file( filename, adapter, storage) do
+    filename
+    |> Path.expand()
+    |> File.open( [ :read, { :read_ahead, @read_ahead}], &load_file( &1, adapter, storage))
+    |> interpret_open_file()
+  end
+
+  defp interpret_open_file( { :ok, result}), do: result
+  defp interpret_open_file( { :error, _} = error), do: error
+
+  @spec load_file( File.io_device(), adapter(), storage()) :: { :ok, History.t()} | { :error, any()}
+  defp load_file( file, adapter, storage) do
+    with { :ok, header} <- adapter.read_header( file),
+         { :ok, data} <- storage.init(),
+         { :ok, data} <- store_next_bar( file, adapter, data, storage)
+      do
+      { :ok, History.new( header: header, data: data)}
     end
-    |> Matcha.Spec.source()
+  end
+
+  # Tail-recursively reads bars one after another via the provided adapter
+  # then stores them via the provided `store_bar()` function.
+  @spec store_next_bar( File.io_device(), adapter(), data(), storage()) :: { :ok, data()} | { :error, any()}
+  defp store_next_bar( file, adapter, data, storage) do
+    with { :ok, bar} <- adapter.read_bar( file),
+         { :ok, data} <- storage.store_bar( data, bar)
+      do
+      store_next_bar( file, adapter, data, storage)
+    else
+      :eof ->
+        { :ok, data}
+
+      { :error, reason} = error ->
+        Logger.error inspect( reason)
+        error
+    end
   end
 end
