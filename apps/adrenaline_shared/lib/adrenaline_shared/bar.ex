@@ -40,4 +40,6 @@ defmodule AdrenalineShared.Bar do
 
   @spec volume( t()) :: volume()
   def volume( { _datetime, _open, _high, _low, _close, volume}), do: volume
+
+  defguard is_bar( term) when tuple_size( term) == 6
 end
