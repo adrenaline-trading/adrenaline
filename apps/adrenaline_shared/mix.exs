@@ -37,8 +37,7 @@ defmodule AdrenalineShared.MixProject do
   defp deps do
     [
       { :extructure, "~> 1.0.0"},
-      { :timex, "~> 3.0"},
-      { :matcha, "~> 0.1"}
+      { :timex, "~> 3.0"}
     ]
   end
 

@@ -44,7 +44,8 @@ defmodule Adrenaline.MixProject do
       {:swoosh, "~> 1.3"},
       {:finch, "~> 0.13"},
       { :adrenaline_shared, in_umbrella: true},
-      { :extructure, "~> 1.0.0"}
+      { :extructure, "~> 1.0.0"},
+      { :matcha, "~> 0.1"}
     ]
   end
 

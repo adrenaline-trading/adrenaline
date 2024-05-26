@@ -3,7 +3,8 @@ defmodule Adrenaline.Adapters.MT4 do
   MT4 history file adapter.
   """
   alias Adrenaline.Adapters.MT4.{ MT4Header, MT4Bar}
-  alias Adrenaline.History.{ Header, Bar}
+  alias Adrenaline.History.Header
+  alias AdrenalineShared.Bar
 
   @behaviour Adrenaline.History.Adapter
 

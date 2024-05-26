@@ -30,6 +30,9 @@ defmodule AdrenalineWeb.Chart.ChartLive do
       |> assign_timeframe( :d1)
       |> assign_connected( connected?( socket))
       |> store_dataset( history.data)
+      |> assign_overlays( [
+        OHLC.MA.new( period: 5, color: "0000AA", width: 2)
+      ])
 
     { :ok, socket}
   end
@@ -203,7 +206,7 @@ defmodule AdrenalineWeb.Chart.ChartLive do
     [ dataset, min_date,
       width, height,
       zoom, timeframe, _domain_min,
-      style, bull_color, bear_color, shadow_color, colorized_bars] <~ assigns
+      style, bull_color, bear_color, shadow_color, colorized_bars, overlays] <~ assigns
 
     style = style == :bar && :tick || :candle
 
@@ -219,9 +222,7 @@ defmodule AdrenalineWeb.Chart.ChartLive do
       body_border: true,
       timeframe: contex_timeframe( timeframe),
       domain_min: &domain_provider( &1, timeframe, domain_min, &2),
-      overlays: [
-        OHLC.MA.new( period: 5, color: "0000AA", width: 2)
-      ]
+      overlays: overlays
     ]
 
     interval_count = Contex.OHLC.fixed_interval_count( opts ++ [ width: width])
@@ -229,7 +230,7 @@ defmodule AdrenalineWeb.Chart.ChartLive do
     # Account for overlay lags
     { first, interval_count} =
       if domain_min do
-        max_lag = Enum.reduce( opts[ :overlays], 0, &max( Overlayable.lag( &1), &2))
+        max_lag = Enum.reduce( overlays, 0, &max( Overlayable.lag( &1), &2))
 
         { Utils.shift_datetime( timeframe, domain_min, -max_lag),
           interval_count + max_lag}
@@ -282,13 +283,13 @@ defmodule AdrenalineWeb.Chart.ChartLive do
 
   @spec store_dataset( Socket.t(), ETS.table()) :: Socket.t()
   defp store_dataset( socket, table) do
-    first_value = ETS.first_value( table)
-    last_value = ETS.last_value( table)
+    first_term = ETS.first_term( table)
+    last_term = ETS.last_term( table)
 
-    dataset = Dataset.new( [ first_value], ["Datetime", "Open", "High", "Low", "Close", "Volume"])
+    dataset = Dataset.new( [ first_term], ["Datetime", "Open", "High", "Low", "Close", "Volume"])
     accessor = Dataset.value_fn(dataset, "Datetime")
-    min_date = accessor.( first_value)
-    max_date = accessor.( last_value)
+    min_date = accessor.( first_term)
+    max_date = accessor.( last_term)
     dataset = Dataset.update_data( dataset, fn _ -> table end)
 
     socket
@@ -309,5 +310,5 @@ defmodule AdrenalineWeb.Chart.ChartLive do
   defassignp [ :style, :bull_color, :bear_color, :shadow_color, :colorized_bars]
 
   # Dynamic chart settings
-  defassignp [ :zoom, :timeframe, :domain_min, :interval_count]
+  defassignp [ :zoom, :timeframe, :domain_min, :interval_count, :overlays]
 end

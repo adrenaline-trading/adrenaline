@@ -6,7 +6,7 @@ defmodule Adrenaline.History do
   """
 
   # Chart activity storage behaviour.
-  alias Adrenaline.History.Bar
+  alias AdrenalineShared.Bar
 
   @type data() :: term()
 

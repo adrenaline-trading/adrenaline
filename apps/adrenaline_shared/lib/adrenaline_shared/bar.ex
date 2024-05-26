@@ -1,4 +1,4 @@
-defmodule Adrenaline.History.Bar do
+defmodule AdrenalineShared.Bar do
   @moduledoc """
   Size/access optimized OHLC bar definition.
   """
@@ -23,8 +23,8 @@ defmodule Adrenaline.History.Bar do
     { datetime, open, high, low, close, volume}
   end
 
-  @spec time( t()) :: datetime()
-  def time( { datetime, _open, _high, _low, _close, _volume}), do: datetime
+  @spec datetime( t()) :: datetime()
+  def datetime( { datetime, _open, _high, _low, _close, _volume}), do: datetime
 
   @spec open( t()) :: open()
   def open( { _datetime, open, _high, _low, _close, _volume}), do: open
