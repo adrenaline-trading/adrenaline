@@ -30,9 +30,18 @@ defmodule AdrenalineWeb.Chart.ChartLive do
       |> assign_timeframe( :d1)
       |> assign_connected( connected?( socket))
       |> store_dataset( history.data)
-      |> assign_overlays( [
-        OHLC.MA.new( period: 5, color: "0000AA", width: 2)
-      ])
+
+    socket =
+      if connected?( socket) do
+        assign_overlays(
+          socket,
+          [
+            OHLC.MA.new( period: 5, color: "0000AA", width: 2),
+          ]
+        )
+      else
+        socket
+      end
 
     { :ok, socket}
   end
